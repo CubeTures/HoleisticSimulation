@@ -1,0 +1,10 @@
+[submodule "deps/raylib"]
+	path = deps/raylib
+	url = https://github.com/raysan5/raylib.git
+[submodule "deps/eigen"]
+	path = deps/eigen
+	url = https://gitlab.com/libeigen/eigen.git
+[submodule "deps/raylib_cpp"]
+	path = deps/raylib_cpp
+	url = https://github.com/robloach/raylib-cpp
+	ignore = dirty

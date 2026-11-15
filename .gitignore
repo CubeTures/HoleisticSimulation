@@ -1,0 +1,14 @@
+# artifacts
+build
+docs
+res
+
+# program
+.polyscope.ini
+imgui.ini
+
+# LLM
+.claude
+
+# IDE
+.vscode
