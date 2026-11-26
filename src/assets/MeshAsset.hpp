@@ -27,7 +27,7 @@ class MeshAsset {
 
     BVH bvh;
 
-    MeshAsset(raylib::Model &&model) : model(std::move(model)) {
+    MeshAsset(std::string filename) : model(RES_DIR + filename) {
         loadModel();
         setTraits();
         buildBVH();

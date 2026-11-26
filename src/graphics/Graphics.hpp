@@ -3,7 +3,13 @@
 #include <variant>
 
 #include "graphics/MeshGraphics.hpp"
+#include "graphics/NoneGraphics.hpp"
 #include "graphics/PlaneGraphics.hpp"
 #include "graphics/SphereGraphics.hpp"
 
-using Graphics = std::variant<SphereGraphics, PlaneGraphics, MeshGraphics>;
+// forward reference
+struct State;
+
+using Graphics =
+    std::variant<NoneGraphics, SphereGraphics, PlaneGraphics, MeshGraphics>;
+
