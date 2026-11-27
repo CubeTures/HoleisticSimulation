@@ -10,7 +10,9 @@ struct State {
         : _static(false), _active(true), scale(1.0f), friction(0.0f),
           restitution(1.0f), mass(1.0f), position(raylib::Vector3::Zero()),
           velocity(raylib::Vector3::Zero()), moment(Mat3::identity()),
-          orientation(Mat3::identity()), angular(raylib::Vector3::Zero()) {
+          momentInv(Mat3::identity()), orientation(Mat3::identity()),
+          angular(raylib::Vector3::Zero()),
+          angularMomentum(raylib::Vector3::Zero()) {
     }
 
     bool _active;
@@ -24,7 +26,15 @@ struct State {
     raylib::Vector3 position;
     raylib::Vector3 velocity;
 
-    Mat3 moment;
+    Mat3 moment, momentInv;
     Mat3 orientation;
-    raylib::Vector3 angular;
+    raylib::Vector3 angular, angularMomentum;
+
+    float massInv() const {
+        return _static ? 0.0f : 1.0f / mass;
+    }
+
+    void updateAngular() {
+        angular = momentInv * angularMomentum;
+    }
 };

@@ -1,9 +1,12 @@
 #pragma once
 
+#include <algorithm>
 #include <unordered_map>
+#include <utility>
 #include <variant>
 #include <vector>
 
+#include "Vector3.hpp"
 #include <Camera3D.hpp>
 #include <Functions.hpp>
 #include <Window.hpp>
@@ -168,8 +171,52 @@ struct Arena {
                 contacts[k].i = i;
                 contacts[k].j = j;
                 if (flipped) {
+                    std::swap(contacts[k].a, contacts[k].b);
                     contacts[k].normal = -contacts[k].normal;
                 }
+            }
+        }
+    }
+
+    void resolveContacts() {
+        for (const Contact &c : contacts) {
+            State &si = next[c.i];
+            State &sj = next[c.j];
+
+            raylib::Vector3 ra = c.a - si.position;
+            raylib::Vector3 rb = c.b - sj.position;
+            raylib::Vector3 va = si.velocity + si.angular.CrossProduct(ra);
+            raylib::Vector3 vb = sj.velocity + sj.angular.CrossProduct(rb);
+            float vRelNeg = c.normal.DotProduct(va - vb);
+            if (vRelNeg > 0) {
+                continue;
+            }
+
+            float restitution = (si.restitution + sj.restitution) / 2.0f;
+            float numerator = vRelNeg * -(1 + restitution);
+            float ca = c.normal.DotProduct(
+                (si.momentInv * ra.CrossProduct(c.normal)).CrossProduct(ra)
+            );
+            float cb = c.normal.DotProduct(
+                (sj.momentInv * rb.CrossProduct(c.normal)).CrossProduct(rb)
+            );
+            float denominator = si.massInv() + sj.massInv() + ca + cb;
+            if (denominator <= 0) {
+                continue;
+            }
+
+            float j = numerator / denominator;
+            raylib::Vector3 p = c.normal * j;
+
+            if (!si._static) {
+                si.velocity += p * si.massInv();
+                si.angularMomentum += ra.CrossProduct(p);
+                si.updateAngular();
+            }
+            if (!sj._static) {
+                sj.velocity -= p * sj.massInv();
+                sj.angularMomentum -= rb.CrossProduct(p);
+                sj.updateAngular();
             }
         }
     }

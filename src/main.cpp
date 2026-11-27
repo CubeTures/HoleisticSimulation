@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <utility>
 
 #include <Camera3D.hpp>
@@ -25,11 +26,9 @@ int main() {
             for (const Mapping &m : arena->_map) {
                 m.step(*arena, arena->next[m.id], clock.deltaPhysics());
             }
-			arena->updateCandidates();
+            arena->updateCandidates();
             arena->updateContacts();
-            for (const Mapping &m : arena->_map) {
-                m.collide(*arena, arena->next[m.id]);
-            }
+            arena->resolveContacts();
             std::swap(arena->entities, arena->next);
 
             clock.resetPhysics();

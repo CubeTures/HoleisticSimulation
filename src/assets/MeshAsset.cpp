@@ -6,6 +6,9 @@
 #include <set>
 #include <utility>
 
+#include "assets/BVH.hpp"
+#include "structures/TriangleIndex.hpp"
+
 void MeshAsset::loadModel() {
     std::map<std::tuple<float, float, float>, int> seenVertices;
     std::set<std::array<int, 3>> seenTriangles;
@@ -88,12 +91,35 @@ void MeshAsset::setTraits() {
     }
     centerOfMass /= static_cast<float>(size);
 
-    unitInertia = Mat3::zero();
+    unitMoment = Mat3::zero();
     for (int i = 0; i < size; i++) {
         raylib::Vector3 r = positions[i] - centerOfMass;
-        unitInertia += Mat3::identity() * r.DotProduct(r) - Mat3::outer(r, r);
+        unitMoment += Mat3::identity() * r.DotProduct(r) - Mat3::outer(r, r);
     }
+    unitMomentInv = unitMoment.inverse();
 }
 void MeshAsset::buildBVH() {
     bvh = BVH(MeshView{positions, triangles});
+}
+
+void MeshAsset::walk(
+    const State &state,
+    const State &other,
+    const MeshAsset &assetOther,
+    std::unordered_map<int, std::vector<int>> &out
+) const {
+    std::vector<BVH::Pair> pairs;
+    bvh.narrow(state, other, assetOther.bvh, pairs);
+
+    for (const BVH::Pair &pair : pairs) {
+        for (int t : pair.first) {
+            const TriangleIndex &tri = triangles[t];
+            for (int v : {tri.i, tri.j, tri.k}) {
+                std::vector<int> &candidates = out[v];
+                candidates.insert(
+                    candidates.end(), pair.second.begin(), pair.second.end()
+                );
+            }
+        }
+    }
 }

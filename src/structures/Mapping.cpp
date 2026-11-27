@@ -1,6 +1,9 @@
 #include "structures/Mapping.hpp"
 
+#include <cmath>
+
 #include "arenas/Arena.hpp"
+#include "assets/MeshAsset.hpp"
 #include "colliders/Collider.hpp"
 #include "forces/FlockForce.hpp"
 #include "forces/FunctionalForce.hpp"
@@ -11,13 +14,14 @@
 void Mapping::step(const Arena &arena, State &next, double dt) const {
     next = arena.entities[id];
 
-    if (!next._active || next._static) {
+    if (!next._active) {
         return;
     }
 
-    raylib::Vector3 f = raylib::Vector3::Zero();
+    raylib::Vector3 force = raylib::Vector3::Zero();
+    raylib::Vector3 torque = raylib::Vector3::Zero();
     for (int i : forces) {
-        f += std::visit(
+        force += std::visit(
             overloaded{
                 [&](const FunctionalForce &f) { return f.at(next); },
                 [&](const FlockForce &f) { return f.at(arena, next); },
@@ -26,35 +30,44 @@ void Mapping::step(const Arena &arena, State &next, double dt) const {
         );
     }
 
-    raylib::Vector3 acc = f / next.mass;
-    next.velocity = next.velocity + acc * dt;
-    next.position = next.position + next.velocity * dt;
+    float h = static_cast<float>(dt);
+
+    raylib::Vector3 a = force / next.mass;
+    next.velocity = next.velocity + a * h;
+    next.position = next.position + next.velocity * h;
+
+    next.angularMomentum = next.angularMomentum + torque * h;
+    updateMoment(arena, next);
+    next.updateAngular();
+    Mat3 rd = Mat3::skew(next.angular) * next.orientation;
+    next.orientation = (next.orientation + rd * h).orthonormalize();
+    updateMoment(arena, next);
+    next.updateAngular();
 }
 
-void Mapping::collide(const Arena &arena, State &next) const {
+void Mapping::updateMoment(const Arena &arena, State &next) const {
     const Collider &collider = arena.colliders[id];
 
-    if (!next._active || next._static) {
+    if (next._static) {
+        next.momentInv = Mat3::zero();
         return;
     }
 
     std::visit(
         overloaded{
-            [&](const NoneCollider &) {
-                // no-op
-            },
-            [&](const SphereCollider &c) {
+            [&](const SphereCollider &) {
                 // TODO
-				// all
             },
-            [&](const PlaneCollider &c) {
-                // TODO
-				// sphere, mesh
+            [&](const MeshCollider &) {
+                const MeshAsset &a = arena.assets.at(asset);
+                float k =
+                    next.mass / a.positions.size() * next.scale * next.scale;
+                Mat3 rt = next.orientation.transpose();
+                next.moment = next.orientation * a.unitMoment * rt * k;
+                next.momentInv =
+                    next.orientation * a.unitMomentInv * rt * (1.0f / k);
             },
-            [&](const MeshCollider &c) {
-                // TODO
-				// all
-            },
+            [](const auto &) {}
         },
         collider
     );
@@ -66,9 +79,6 @@ void Mapping::draw(const Arena &arena) const {
 
     std::visit(
         overloaded{
-            [](const NoneGraphics &) {
-                // no-op
-            },
             [&](const SphereGraphics &g) {
                 // TODO
             },
@@ -79,6 +89,7 @@ void Mapping::draw(const Arena &arena) const {
                 const MeshAsset &a = arena.assets.at(asset);
                 g.draw(state, a);
             },
+            [](const auto &) {},
         },
         graphic
     );
