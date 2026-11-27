@@ -1,33 +1,48 @@
+#include <utility>
+#include <vector>
+
 #include <Camera3D.hpp>
 #include <Color.hpp>
 #include <Functions.hpp>
 #include <Window.hpp>
 
 #include "arenas/Init.hpp"
-#include "structures/Clock.hpp"
+#include "system/Clock.hpp"
+#include "system/Controller.hpp"
 
 int main() {
-    raylib::Window window = raylib::Window(1280, 720);
-    raylib::Camera3D camera =
-        raylib::Camera3D(raylib::Vector3(0, 0, -20), raylib::Vector3(0, 0, 1));
-    Arena *arena = init();
+    raylib::Window window(1280, 720);
+    raylib::Camera3D camera(
+        raylib::Vector3(0, 0, -20), raylib::Vector3(0, 0, 1)
+    );
+    Controller controller(camera, 10);
 
-    Clock clock(60, 600);
+    Arena *arena = init();
+    Clock clock(window, 60, 600);
     while (!window.ShouldClose()) {
-        clock.startLoop(window);
+        clock.startLoop();
 
         if (clock.readyPhysics()) {
-            // integration.integrate(clock.deltaPhysics(), entities);
+            for (const Mapping &m : arena->_map) {
+                m.step(*arena, arena->next[m.id], clock.deltaPhysics());
+            }
+            for (const Mapping &m : arena->_map) {
+                m.collide(*arena, arena->next[m.id]);
+            }
+            std::swap(arena->entities, arena->next);
+
             clock.resetPhysics();
         }
 
         if (clock.readyGraphics()) {
+            controller.listen(clock.deltaGraphics());
+
             window.BeginDrawing();
             window.ClearBackground(raylib::Color::Black());
             camera.BeginMode();
 
-            for (Mapping m : arena->_map) {
-                m.draw(arena);
+            for (const Mapping &m : arena->_map) {
+                m.draw(*arena);
             }
 
             camera.EndMode();
@@ -35,7 +50,7 @@ int main() {
             clock.resetGraphics();
         }
 
-        clock.stopLoop(window);
+        clock.stopLoop();
     }
 
     window.Close();

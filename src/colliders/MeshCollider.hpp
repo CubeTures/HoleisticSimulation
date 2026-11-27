@@ -1,7 +1,12 @@
 #pragma once
 
 class MeshCollider {
-	/* TODO
-		vertexFace
-	*/
+  public:
+    void step() const {
+        // TODO
+    }
+
+    void collide() const {
+        // TODO
+    }
 };

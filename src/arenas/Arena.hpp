@@ -17,33 +17,54 @@
 
 struct Arena {
     std::vector<Mapping> _map;
-    std::unordered_map<std::string, MeshAsset> assets;
+    std::vector<MeshAsset> assets;
+    std::unordered_map<std::string, int> assetsMap;
 
     std::vector<State> entities;
+    std::vector<State> next;
+
     std::vector<Collider> colliders;
     std::vector<Graphics> graphics;
 
     std::vector<Force> forces;
+    std::unordered_map<std::string, int> forcesMap;
     std::vector<Generator> generators;
 
     void addMeshAsset(std::string filename) {
-        assets.insert({filename, MeshAsset(filename)});
+        int index = static_cast<int>(assets.size());
+        assets.push_back(MeshAsset(filename));
+        assetsMap.insert({filename, index});
+    }
+
+    void addForce(std::string name, Force force) {
+        int index = static_cast<int>(forces.size());
+        forces.push_back(std::move(force));
+        forcesMap.emplace(name, index);
     }
 
     void addEntity(
         State state,
         Collider collider,
         Graphics graphic,
-        std::string asset
+        std::vector<std::string> forces,
+        std::string asset = "__none__"
     ) {
         entities.push_back(state);
+        next.push_back(state);
         colliders.push_back(collider);
         graphics.push_back(graphic);
-        _map.push_back(Mapping{
-            asset,
-            static_cast<int>(entities.size()) - 1,
-            static_cast<int>(colliders.size()) - 1,
-            static_cast<int>(graphics.size()) - 1
-        });
+
+        int assetId = -1;
+        if (asset != "__none__") {
+            assetId = assetsMap.at(asset);
+        }
+
+        std::vector<int> forceIds;
+        for (std::string f : forces) {
+            forceIds.push_back(forcesMap.at(f));
+        }
+
+        _map.push_back(Mapping{static_cast<int>(_map.size()), assetId, forceIds}
+        );
     }
 };

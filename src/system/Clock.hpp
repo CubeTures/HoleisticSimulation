@@ -5,6 +5,8 @@
 
 class Clock {
   private:
+    const raylib::Window &window;
+
     double targetFPS;
     double targetPPS;
     double graphicsDeltaTime;
@@ -13,16 +15,16 @@ class Clock {
     double start;
 
   public:
-    Clock(double fps, double pps)
-        : targetFPS(1.0 / fps), targetPPS(1.0 / pps),
+    Clock(const raylib::Window &window, double fps, double pps)
+        : window(window), targetFPS(1.0 / fps), targetPPS(1.0 / pps),
           graphicsDeltaTime(targetFPS * 2), physicsDeltaTime(targetPPS * 2) {
     }
 
-    void startLoop(raylib::Window &window) {
+    void startLoop() {
         start = window.GetTime();
     }
 
-    void stopLoop(raylib::Window &window) {
+    void stopLoop() {
         double end = window.GetTime();
         double dt = end - start;
         double wait =

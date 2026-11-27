@@ -1,15 +1,18 @@
 #pragma once
 
-#include <string>
+#include <vector>
+
+#include "structures/State.hpp"
 
 // forward reference
 struct Arena;
 
 struct Mapping {
-    std::string asset;
-    int entity;
-    int collider;
-    int graphic;
+    int id;
+    int asset;
+    std::vector<int> forces;
 
-	void draw(Arena *arena);
+    void step(const Arena &arena, State &next, double dt) const;
+    void collide(const Arena &arena, State &next) const;
+    void draw(const Arena &arena) const;
 };
