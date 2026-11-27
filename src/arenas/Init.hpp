@@ -6,7 +6,7 @@
 #include <Window.hpp>
 
 #include "arenas/Arena.hpp"
-#include "colliders/MeshCollider.hpp"
+#include "colliders/Collider.hpp"
 #include "forces/FunctionalForce.hpp"
 #include "graphics/MeshGraphics.hpp"
 #include "structures/State.hpp"
@@ -23,7 +23,13 @@ Arena *init() {
                     }));
 
     State state;
+    state.position = raylib::Vector3(0, 2, 0);
     arena->addEntity(state, MeshCollider{}, MeshGraphics{}, {gravity}, cube);
+
+    state = State();
+    state.scale = 2;
+    state.position = raylib::Vector3(1, -1, 1);
+    arena->addEntity(state, MeshCollider{}, MeshGraphics{}, {}, cube);
 
     return arena;
 }

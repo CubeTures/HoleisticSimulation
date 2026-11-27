@@ -2,10 +2,12 @@
 
 #include <variant>
 
-#include "colliders/MeshCollider.hpp"
-#include "colliders/NoneCollider.hpp"
-#include "colliders/PlaneCollider.hpp"
-#include "colliders/SphereCollider.hpp"
+#include <Vector3.hpp>
+
+struct NoneCollider {};
+struct SphereCollider {};
+struct PlaneCollider {};
+struct MeshCollider {};
 
 using Collider =
     std::variant<NoneCollider, SphereCollider, PlaneCollider, MeshCollider>;

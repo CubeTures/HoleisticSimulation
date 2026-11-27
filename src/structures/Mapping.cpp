@@ -1,7 +1,7 @@
 #include "structures/Mapping.hpp"
 
 #include "arenas/Arena.hpp"
-#include "colliders/NoneCollider.hpp"
+#include "colliders/Collider.hpp"
 #include "forces/FlockForce.hpp"
 #include "forces/FunctionalForce.hpp"
 #include "graphics/Graphics.hpp"
@@ -45,14 +45,15 @@ void Mapping::collide(const Arena &arena, State &next) const {
             },
             [&](const SphereCollider &c) {
                 // TODO
+				// all
             },
             [&](const PlaneCollider &c) {
                 // TODO
+				// sphere, mesh
             },
             [&](const MeshCollider &c) {
                 // TODO
-                const MeshAsset &a = arena.assets.at(asset);
-                c.collide();
+				// all
             },
         },
         collider

@@ -1,5 +1,4 @@
 #include <utility>
-#include <vector>
 
 #include <Camera3D.hpp>
 #include <Color.hpp>
@@ -26,6 +25,8 @@ int main() {
             for (const Mapping &m : arena->_map) {
                 m.step(*arena, arena->next[m.id], clock.deltaPhysics());
             }
+			arena->updateCandidates();
+            arena->updateContacts();
             for (const Mapping &m : arena->_map) {
                 m.collide(*arena, arena->next[m.id]);
             }
