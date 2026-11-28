@@ -10,7 +10,7 @@
 #include "structures/Overloaded.hpp"
 #include "structures/State.hpp"
 
-void Mapping::step(const Arena &arena, State &next, double dt) const {
+void Mapping::stepVelocity(const Arena &arena, State &next, double dt) const {
     next = arena.entities[id];
 
     if (!next._active) {
@@ -33,11 +33,21 @@ void Mapping::step(const Arena &arena, State &next, double dt) const {
 
     raylib::Vector3 a = force / next.mass;
     next.velocity = next.velocity + a * h;
-    next.position = next.position + next.velocity * h;
 
     next.angularMomentum = next.angularMomentum + torque * h;
     updateMoment(arena, next);
     next.updateAngular();
+}
+
+void Mapping::stepPosition(const Arena &arena, State &next, double dt) const {
+    if (!next._active) {
+        return;
+    }
+
+    float h = static_cast<float>(dt);
+
+    next.position = next.position + next.velocity * h;
+
     Mat3 rd = Mat3::skew(next.angular) * next.orientation;
     next.orientation = (next.orientation + rd * h).orthonormalize();
     updateMoment(arena, next);

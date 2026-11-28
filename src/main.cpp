@@ -29,7 +29,8 @@ int main() {
             arena->stepForces(clock.deltaPhysics());
             arena->updateCandidates();
             arena->updateContacts();
-            arena->resolveContacts();
+            arena->resolveContacts(clock.deltaPhysics());
+            arena->stepPositions(clock.deltaPhysics());
             std::swap(arena->entities, arena->next);
             clock.resetPhysics();
         }

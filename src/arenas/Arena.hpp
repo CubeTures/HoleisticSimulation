@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -97,7 +98,13 @@ struct Arena {
 
     void stepForces(double dt) {
         for (const Mapping &m : _map) {
-            m.step(*this, next[m.id], dt);
+            m.stepVelocity(*this, next[m.id], dt);
+        }
+    }
+
+    void stepPositions(double dt) {
+        for (const Mapping &m : _map) {
+            m.stepPosition(*this, next[m.id], dt);
         }
     }
 
@@ -190,46 +197,112 @@ struct Arena {
         }
     }
 
-    void resolveContacts() {
-        for (const Contact &c : contacts) {
-            State &si = next[c.i];
-            State &sj = next[c.j];
+    // https://github.com/erincatto/box2d-lite (Arbiter::{PreStep,ApplyImpulse})
+    void resolveContacts(double dt) {
+        float dtInv = static_cast<float>(1.0 / dt);
 
-            raylib::Vector3 ra = c.a - si.position;
-            raylib::Vector3 rb = c.b - sj.position;
-            raylib::Vector3 va = si.velocity + si.angular.CrossProduct(ra);
-            raylib::Vector3 vb = sj.velocity + sj.angular.CrossProduct(rb);
-            float vRelNeg = c.normal.DotProduct(va - vb);
-            if (vRelNeg > 0) {
-                continue;
-            }
-
-            float restitution = (si.restitution + sj.restitution) / 2.0f;
-            float numerator = vRelNeg * -(1 + restitution);
-            float ca = c.normal.DotProduct(
-                (si.momentInv * ra.CrossProduct(c.normal)).CrossProduct(ra)
-            );
-            float cb = c.normal.DotProduct(
-                (sj.momentInv * rb.CrossProduct(c.normal)).CrossProduct(rb)
-            );
-            float denominator = si.massInv() + sj.massInv() + ca + cb;
-            if (denominator <= 0) {
-                continue;
-            }
-
-            float j = numerator / denominator;
-            raylib::Vector3 p = c.normal * j;
-
-            if (!si._static) {
-                si.velocity += p * si.massInv();
-                si.angularMomentum += ra.CrossProduct(p);
-                si.updateAngular();
-            }
-            if (!sj._static) {
-                sj.velocity -= p * sj.massInv();
-                sj.angularMomentum -= rb.CrossProduct(p);
-                sj.updateAngular();
+        for (Contact &c : contacts) {
+            preSolve(c, dtInv);
+        }
+        for (int i = 0; i < ITERATIONS; i++) {
+            for (Contact &c : contacts) {
+                solveContact(c);
             }
         }
+    }
+
+    inline void preSolve(Contact &c, float dtInv) {
+        const State &si = next[c.i];
+        const State &sj = next[c.j];
+
+        c.ra = c.a - si.position;
+        c.rb = c.b - sj.position;
+
+        tangentBasis(c.normal, c.t1, c.t2);
+        c.massN = effectiveMass(si, sj, c.ra, c.rb, c.normal);
+        c.massT1 = effectiveMass(si, sj, c.ra, c.rb, c.t1);
+        c.massT2 = effectiveMass(si, sj, c.ra, c.rb, c.t2);
+
+        float positional =
+            BIAS_FACTOR * dtInv * std::max(0.0f, c.depth - ALLOWED_PENETRATION);
+        float vn = c.normal.DotProduct(relativeVelocity(c));
+        float e = (si.restitution + sj.restitution) / 2.0f;
+        float bounce = vn < -RESTITUTION_THRESHOLD ? -e * vn : 0.0f;
+        c.bias = std::max(positional, bounce);
+    }
+
+    inline static void tangentBasis(
+        const raylib::Vector3 &n,
+        raylib::Vector3 &t1,
+        raylib::Vector3 &t2
+    ) {
+        raylib::Vector3 axis = std::abs(n.x) < THIRD_ROOT_INV
+                                   ? raylib::Vector3(1, 0, 0)
+                                   : raylib::Vector3(0, 1, 0);
+        t1 = n.CrossProduct(axis).Normalize();
+        t2 = n.CrossProduct(t1);
+    }
+
+    inline static float effectiveMass(
+        const State &si,
+        const State &sj,
+        const raylib::Vector3 &ra,
+        const raylib::Vector3 &rb,
+        const raylib::Vector3 &d
+    ) {
+        float ca =
+            d.DotProduct((si.momentInv * ra.CrossProduct(d)).CrossProduct(ra));
+        float cb =
+            d.DotProduct((sj.momentInv * rb.CrossProduct(d)).CrossProduct(rb));
+        float k = si.massInv() + sj.massInv() + ca + cb;
+        return k > 0.0f ? 1.0f / k : 0.0f;
+    }
+
+    inline void solveContact(Contact &c) {
+        const State &si = next[c.i];
+        const State &sj = next[c.j];
+
+        float vn = c.normal.DotProduct(relativeVelocity(c));
+        accumulate(c, c.normal, c.pn, c.massN * (c.bias - vn), 0.0f, INFINITY);
+
+        float maxPt = std::sqrt(si.friction * sj.friction) * c.pn;
+        float vt1 = c.t1.DotProduct(relativeVelocity(c));
+        accumulate(c, c.t1, c.pt1, -c.massT1 * vt1, -maxPt, maxPt);
+        float vt2 = c.t2.DotProduct(relativeVelocity(c));
+        accumulate(c, c.t2, c.pt2, -c.massT2 * vt2, -maxPt, maxPt);
+    }
+
+    inline void accumulate(
+        const Contact &c,
+        const raylib::Vector3 &d,
+        float &p,
+        float dp,
+        float lo,
+        float hi
+    ) {
+        float p0 = p;
+        p = std::clamp(p0 + dp, lo, hi);
+        raylib::Vector3 r = d * (p - p0);
+
+        State &si = next[c.i];
+        State &sj = next[c.j];
+        if (!si._static) {
+            si.velocity += r * si.massInv();
+            si.angularMomentum += c.ra.CrossProduct(r);
+            si.updateAngular();
+        }
+        if (!sj._static) {
+            sj.velocity -= r * sj.massInv();
+            sj.angularMomentum -= c.rb.CrossProduct(r);
+            sj.updateAngular();
+        }
+    }
+
+    inline raylib::Vector3 relativeVelocity(const Contact &c) const {
+        const State &si = next[c.i];
+        const State &sj = next[c.j];
+        raylib::Vector3 va = si.velocity + si.angular.CrossProduct(c.ra);
+        raylib::Vector3 vb = sj.velocity + sj.angular.CrossProduct(c.rb);
+        return va - vb;
     }
 };

@@ -16,5 +16,8 @@ struct Mapping {
     int asset;
     std::vector<int> forces;
 
-    void step(const Arena &arena, State &next, double dt) const;
+    // forces -> velocity (copies entities[id] into next first)
+    void stepVelocity(const Arena &arena, State &next, double dt) const;
+    // velocity -> position/orientation, run after contacts are resolved
+    void stepPosition(const Arena &arena, State &next, double dt) const;
 };
