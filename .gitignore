@@ -1,7 +1,8 @@
 # artifacts
 build
 docs
-res
+res/*
+!res/shaders/
 
 # program
 .polyscope.ini

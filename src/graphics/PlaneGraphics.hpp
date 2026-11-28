@@ -1,5 +1,7 @@
 #pragma once
 
-class PlaneGraphics {
-	// TODO
+#include "graphics/BaseGraphics.hpp"
+
+class PlaneGraphics : public BaseGraphics {
+    // TODO
 };

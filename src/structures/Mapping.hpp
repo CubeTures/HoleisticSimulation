@@ -17,5 +17,4 @@ struct Mapping {
     std::vector<int> forces;
 
     void step(const Arena &arena, State &next, double dt) const;
-    void draw(const Arena &arena) const;
 };

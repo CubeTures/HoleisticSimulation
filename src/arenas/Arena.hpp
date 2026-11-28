@@ -57,6 +57,12 @@ struct Arena {
         assetsMap.insert({filename, index});
     }
 
+    void addMeshAssets(std::vector<std::string> filenames) {
+        for (std::string filename : filenames) {
+            addMeshAsset(filename);
+        }
+    }
+
     void addForce(std::string name, Force force) {
         int index = static_cast<int>(forces.size());
         forces.push_back(std::move(force));
@@ -87,6 +93,12 @@ struct Arena {
 
         _map.push_back(Mapping{static_cast<int>(_map.size()), assetId, forceIds}
         );
+    }
+
+    void stepForces(double dt) {
+        for (const Mapping &m : _map) {
+            m.step(*this, next[m.id], dt);
+        }
     }
 
     void updateCandidates() {

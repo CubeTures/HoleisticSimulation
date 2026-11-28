@@ -7,7 +7,6 @@
 #include "colliders/Collider.hpp"
 #include "forces/FlockForce.hpp"
 #include "forces/FunctionalForce.hpp"
-#include "graphics/Graphics.hpp"
 #include "structures/Overloaded.hpp"
 #include "structures/State.hpp"
 
@@ -70,27 +69,5 @@ void Mapping::updateMoment(const Arena &arena, State &next) const {
             [](const auto &) {}
         },
         collider
-    );
-}
-
-void Mapping::draw(const Arena &arena) const {
-    const Graphics &graphic = arena.graphics[id];
-    const State &state = arena.entities[id];
-
-    std::visit(
-        overloaded{
-            [&](const SphereGraphics &g) {
-                // TODO
-            },
-            [&](const PlaneGraphics &g) {
-                // TODO
-            },
-            [&](const MeshGraphics &g) {
-                const MeshAsset &a = arena.assets.at(asset);
-                g.draw(state, a);
-            },
-            [](const auto &) {},
-        },
-        graphic
     );
 }

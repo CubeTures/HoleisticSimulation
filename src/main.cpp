@@ -7,6 +7,7 @@
 #include <Window.hpp>
 
 #include "arenas/Init.hpp"
+#include "shaders/Renderer.hpp"
 #include "system/Clock.hpp"
 #include "system/Controller.hpp"
 
@@ -18,19 +19,18 @@ int main() {
     Controller controller(camera, 10);
 
     Arena *arena = init();
+    Renderer renderer(BlinnPhongShader{}, ParticleShader{});
     Clock clock(window, 60, 600);
+
     while (!window.ShouldClose()) {
         clock.startLoop();
 
         if (clock.readyPhysics()) {
-            for (const Mapping &m : arena->_map) {
-                m.step(*arena, arena->next[m.id], clock.deltaPhysics());
-            }
+            arena->stepForces(clock.deltaPhysics());
             arena->updateCandidates();
             arena->updateContacts();
             arena->resolveContacts();
             std::swap(arena->entities, arena->next);
-
             clock.resetPhysics();
         }
 
@@ -41,9 +41,7 @@ int main() {
             window.ClearBackground(raylib::Color::Black());
             camera.BeginMode();
 
-            for (const Mapping &m : arena->_map) {
-                m.draw(*arena);
-            }
+            renderer.draw(*arena, camera);
 
             camera.EndMode();
             window.EndDrawing();
@@ -56,20 +54,3 @@ int main() {
     window.Close();
     return 0;
 }
-
-/*
-    Need to handle:
-    forces (gravity, wind)
-    rigid bodies
-    particles, flocks
-        - become generators allocate
-    shaders
-    input
-    camera
-    heightmap -> mesh
-    bvh
-    collisions
-        -
-    integration methods
-        -
-*/

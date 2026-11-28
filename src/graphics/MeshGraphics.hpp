@@ -3,9 +3,10 @@
 #include <Color.hpp>
 
 #include "assets/MeshAsset.hpp"
+#include "graphics/BaseGraphics.hpp"
 #include "structures/State.hpp"
 
-class MeshGraphics {
+class MeshGraphics : public BaseGraphics {
   public:
     void draw(const State &state, const MeshAsset &asset) const {
         ::Model m = asset.model;
